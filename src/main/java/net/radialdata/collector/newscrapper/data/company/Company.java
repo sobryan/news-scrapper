@@ -1,4 +1,4 @@
-package net.radialdata.collector.newscrapper;
+package net.radialdata.collector.newscrapper.data.company;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -12,11 +12,25 @@ import javax.persistence.Id;
 public class Company {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    Long id;
+    String market;
     String symbol;
     String name;
     String sector;
     String industry;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getMarket() { return market; }
+
+    public void setMarket(String market) { this.market = market; }
 
     public String getSymbol() {
         return symbol;
