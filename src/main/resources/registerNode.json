@@ -1,0 +1,26 @@
+{
+  "proxy": "org.openqa.grid.selenium.proxy.DefaultRemoteProxy",
+  "role": "node",
+  "port": 5555,
+  "maxSession": 15,
+  "capabilities":
+  [
+    {
+      "browserName": "firefox",
+      "maxInstances": 15,
+      "seleniumProtocol": "WebDriver"
+    }
+  ],
+  "cleanUpCycle":2000,
+  "registerCycle": 5000,
+  "nodePolling": 5000,
+  "nodeStatusCheckTimeout": 5000,
+  "unregisterIfStillDownAfter": 60000,
+  "downPollingLimit": 2,
+  "debug": true,
+  "register": true,
+  "hub": "http://127.0.0.1:4444",
+  "servlets" : [],
+  "withoutServlets": [],
+  "custom": {}
+}

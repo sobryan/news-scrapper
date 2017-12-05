@@ -4,8 +4,14 @@ package net.radialdata.collector.newscrapper.service;
 import com.google.cloud.language.v1beta2.Document;
 import com.google.cloud.language.v1beta2.LanguageServiceClient;
 import com.google.cloud.language.v1beta2.Sentiment;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.NaturalLanguageUnderstanding;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalysisResults;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.AnalyzeOptions;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.Features;
+import com.ibm.watson.developer_cloud.natural_language_understanding.v1.model.SentimentOptions;
 import de.l3s.boilerpipe.extractors.ArticleExtractor;
 import net.radialdata.collector.newscrapper.data.article.Article;
+import net.radialdata.collector.newscrapper.data.article.ArticleRepository;
 import net.radialdata.collector.newscrapper.data.company.Company;
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
@@ -16,9 +22,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.aop.target.CommonsPool2TargetSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -33,10 +41,17 @@ public class BrowserService {
 
     private static final Logger log = LoggerFactory.getLogger(BrowserService.class);
 
+    @Value("${watson.auth.username}")
+    private String watsonUsername;
+    @Value("${watson.auth.password}")
+    private String watsonPassword;
 
     @Autowired
     @Qualifier("poolTargetSourceWebDriver")
     CommonsPool2TargetSource poolTargetSourceWebDriver;
+
+    @Autowired
+    ArticleRepository articleRepository;
 
     @Async("linkCollectorTaskExecutor")
     public Future<ArrayList<String>> collectLinksFromPage(String page) throws Exception {
@@ -128,6 +143,46 @@ public class BrowserService {
         }
 
         return new AsyncResult<Article>(article);
+    }
+
+    @Transactional
+    @Async("linkCollectorTaskExecutor")
+    public Future<Article> analyzeSentimentWithWatson(Article article){
+
+        NaturalLanguageUnderstanding service = new NaturalLanguageUnderstanding(
+                NaturalLanguageUnderstanding.VERSION_DATE_2017_02_27,
+                watsonUsername,
+                watsonPassword);
+
+        String url = article.getUrl();
+
+        List<String> targets = new ArrayList<>();
+        targets.add("stocks");
+
+        SentimentOptions sentiment = new SentimentOptions.Builder().targets(targets)
+                .build();
+
+        Features features = new Features.Builder()
+                .sentiment(sentiment)
+                .build();
+
+        AnalyzeOptions parameters = new AnalyzeOptions.Builder()
+                .url(url)
+                .features(features)
+                .build();
+
+        AnalysisResults response = service
+                .analyze(parameters)
+                .execute();
+
+        article.setScore(response.getSentiment().getDocument().getScore().floatValue());
+
+        System.out.println(response);
+
+        articleRepository.save(article);
+
+        return new AsyncResult<Article>(article);
+
     }
 
     public Article analyzeSentimentWithGoogle(Article article) throws Exception {
